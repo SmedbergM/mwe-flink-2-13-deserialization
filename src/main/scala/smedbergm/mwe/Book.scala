@@ -24,10 +24,17 @@ case object BookSelector extends ProcessFunction[Json, Book] {
 case object BookSink extends SinkFunction[Book] with LazyLogging {
   override def invoke(book: Book,
                       context: SinkFunction.Context): Unit = {
-    book.isbn.fold {
-      logger.info("{}: {} ${} (no ISBN)", book.author, book.title, book.price)
-    } { isbn =>
-      logger.info("{}: {} (ISBN {}) ${}", book.author, book.title, isbn, book.price)
+    try {
+      book.isbn.fold {
+        logger.info("{}: {} ${} (no ISBN)", book.author, book.title, book.price)
+      } { isbn =>
+        logger.info("{}: {} (ISBN {}) ${}", book.author, book.title, isbn, book.price)
+      }
+    } catch { case _: NoSuchElementException =>
+      logger.warn(
+        "Book.isbn: {} with identityHashCode {} reports isEmpty {}; true None is {}",
+        book.isbn, System.identityHashCode(book.isbn), book.isbn.isEmpty, System.identityHashCode(None)
+      )
     }
   }
 }
